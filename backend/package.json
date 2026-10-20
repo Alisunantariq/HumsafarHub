@@ -1,0 +1,40 @@
+{
+  "name": "hamsafarhub-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend API for HamsafarHub",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "payments:check": "node scripts/check-safepay.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@sfpy/node-core": "^0.3.5",
+    "axios": "^1.20.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.0"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2"
+  }
+}

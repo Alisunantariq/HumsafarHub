@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN "phoneNumber" VARCHAR(40);

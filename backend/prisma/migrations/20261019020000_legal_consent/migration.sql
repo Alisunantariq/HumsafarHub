@@ -1,0 +1,3 @@
+ALTER TABLE "User"
+ADD COLUMN "legalAcceptedAt" TIMESTAMP(3),
+ADD COLUMN "legalVersion" VARCHAR(32);

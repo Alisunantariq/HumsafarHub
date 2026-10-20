@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MATCHMAKER
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+  SEPARATED
+}
+
+enum CoordinationStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  WITHDRAWN
+}
+
+enum PlanTier {
+  NORMAL
+  GOLDEN
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum SubscriptionState {
+  PENDING
+  ACTIVE
+  PAYMENT_FAILED
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionPaymentState {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum SubscriptionCheckoutState {
+  PENDING
+  READY
+  FAILED
+}
+
+enum WebhookEventState {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model User {
+  id                 String             @id @default(uuid()) @db.Uuid
+  email              String             @unique @db.VarChar(320)
+  passwordHash       String             @db.VarChar(255)
+  fullName           String             @db.VarChar(160)
+  phoneNumber        String?            @db.VarChar(40)
+  dateOfBirth        DateTime?          @db.Date
+  legalAcceptedAt    DateTime?
+  legalVersion       String?            @db.VarChar(32)
+  role               Role               @default(MATCHMAKER)
+  subscriptionStatus SubscriptionStatus @default(INACTIVE)
+  subscriptionPlan   PlanTier?
+  approvalStatus     ApprovalStatus     @default(PENDING)
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  profiles            ClientProfile[]       @relation("UploadedProfiles")
+  sentRequests        CoordinationRequest[] @relation("CoordinationSender")
+  receivedRequests    CoordinationRequest[] @relation("CoordinationReceiver")
+  sentMessages        Message[]             @relation("MessageSender")
+  receivedMessages    Message[]             @relation("MessageRecipient")
+  payments            PaymentOrder[]
+  subscriptions       Subscription[]
+
+  @@index([role, approvalStatus, subscriptionStatus])
+}
+
+model ClientProfile {
+  id                    String        @id @default(uuid()) @db.Uuid
+  matchmakerId          String        @db.Uuid
+  fullName              String        @db.VarChar(160)
+  gender                String        @db.VarChar(40)
+  dateOfBirth           DateTime      @db.Date
+  heightCm              Int
+  propertyMarlas        Decimal       @db.Decimal(7, 2)
+  education             String        @db.VarChar(160)
+  profession            String?       @db.VarChar(160)
+  incomeMin             Decimal?      @db.Decimal(14, 2)
+  incomeMax             Decimal?      @db.Decimal(14, 2)
+  maritalStatus         MaritalStatus
+  maritalHistory        String?       @db.VarChar(1000)
+  caste                 String        @db.VarChar(120)
+  city                  String        @db.VarChar(120)
+  contactPhone          String        @db.VarChar(40)
+  contactEmail          String?       @db.VarChar(320)
+  preferredCaste        String?       @db.VarChar(120)
+  preferredMinAge       Int?
+  preferredMaxAge       Int?
+  preferredCity         String?       @db.VarChar(120)
+  preferredEducation    String?       @db.VarChar(160)
+  preferredMinHeightCm  Int?
+  preferredMaxHeightCm  Int?
+  clientOrigin          String?       @db.VarChar(80)
+  preferences           String?       @db.VarChar(1000)
+  description           String?       @db.VarChar(2000)
+  requirements          String?       @db.VarChar(2000)
+  photoData             Bytes?
+  photoMimeType         String?       @db.VarChar(40)
+  isVisible             Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  matchmaker       User                  @relation("UploadedProfiles", fields: [matchmakerId], references: [id], onDelete: Restrict)
+  coordinationRequests CoordinationRequest[]
+
+  @@index([matchmakerId])
+  @@index([caste, city, education])
+  @@index([dateOfBirth])
+  @@index([propertyMarlas])
+  @@index([isVisible])
+}
+
+model CoordinationRequest {
+  id              String             @id @default(uuid()) @db.Uuid
+  senderId        String             @db.Uuid
+  receiverId      String             @db.Uuid
+  targetProfileId String             @db.Uuid
+  status          CoordinationStatus @default(PENDING)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  respondedAt     DateTime?
+
+  sender        User          @relation("CoordinationSender", fields: [senderId], references: [id], onDelete: Restrict)
+  receiver      User          @relation("CoordinationReceiver", fields: [receiverId], references: [id], onDelete: Restrict)
+  targetProfile ClientProfile @relation(fields: [targetProfileId], references: [id], onDelete: Restrict)
+
+  @@index([senderId, status])
+  @@index([receiverId, status])
+  @@index([targetProfileId, status])
+}
+
+model Message {
+  id          String   @id @default(uuid()) @db.Uuid
+  threadId    String   @db.Uuid
+  senderId    String   @db.Uuid
+  recipientId String   @db.Uuid
+  body        String   @db.VarChar(10000)
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Restrict)
+
+  @@index([threadId, createdAt])
+  @@index([senderId, recipientId])
+}
+
+model PaymentOrder {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @db.Uuid
+  plan              PlanTier
+  amountPkr         Int
+  status            PaymentStatus @default(PENDING)
+  provider          String        @default("SAFEPAY") @db.VarChar(40)
+  tracker           String?       @unique @db.VarChar(255)
+  providerReference String?       @db.VarChar(255)
+  createdAt         DateTime      @default(now())
+  paidAt            DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Subscription {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  reference             String                  @unique @db.VarChar(80)
+  userId                String                  @db.Uuid
+  providerSubscriptionId String?                 @unique @db.VarChar(255)
+  providerPlanId        String                  @db.VarChar(255)
+  tier                  PlanTier
+  amountPkr             Int
+  currency              String                  @default("PKR") @db.VarChar(3)
+  status                SubscriptionState       @default(PENDING)
+  checkoutStatus        SubscriptionCheckoutState @default(PENDING)
+  latestPaymentStatus   SubscriptionPaymentState @default(PENDING)
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  lastPaidAt            DateTime?
+  gracePeriodEndsAt     DateTime?
+  cancellationRequestedAt DateTime?
+  cancelledAt           DateTime?
+  lastTransactionId     String?                 @db.VarChar(255)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  user     User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  payments SubscriptionPayment[]
+
+  @@index([userId, status, createdAt])
+  @@index([status, currentPeriodEnd])
+}
+
+model SubscriptionPayment {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  subscriptionId        String                  @db.Uuid
+  providerTransactionId String                  @unique @db.VarChar(255)
+  status                SubscriptionPaymentState
+  amountPkr             Int
+  currency              String                  @default("PKR") @db.VarChar(3)
+  createdAt             DateTime                @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+
+  @@index([subscriptionId, createdAt])
+}
+
+model SubscriptionWebhookEvent {
+  id               String            @id @default(uuid()) @db.Uuid
+  providerEventId  String            @unique @db.VarChar(255)
+  type             String            @db.VarChar(120)
+  payload          Json
+  status           WebhookEventState @default(PENDING)
+  attempts         Int               @default(0)
+  lockAt           DateTime?
+  receivedAt       DateTime          @default(now())
+  processedAt      DateTime?
+  lastError        String?           @db.VarChar(1000)
+
+  @@index([status, receivedAt])
+}

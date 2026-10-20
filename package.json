@@ -1,0 +1,30 @@
+{
+  "name": "hamsafarhub",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend",
+    "test": "npm run test --workspace backend",
+    "lint": "npm run lint --workspace frontend",
+    "db:generate": "npm run prisma:generate --workspace backend",
+    "db:studio": "npm run prisma:studio --workspace backend",
+    "db:migrate": "npm run db:migrate --workspace backend",
+    "db:deploy": "npm run db:deploy --workspace backend",
+    "db:seed": "npm run db:seed --workspace backend",
+    "payments:check": "npm run payments:check --workspace backend"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "@prisma/client": true,
+    "prisma": true,
+    "@prisma/engines": true
+  }
+}
